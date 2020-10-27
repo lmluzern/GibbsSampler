@@ -9,7 +9,7 @@ LABEL_NAMES = ['emerging', 'established', 'no_option']
 NUMBER_OF_LABELS = len(LABEL_NAMES)
 LABEL_INDEX = np.array(range(0,NUMBER_OF_LABELS))
 
-def run(annotation_file,labels_file,T,gamma,mu,alpha,beta):
+def run(annotation_file,labels_file,T,gamma,mu,alpha,beta,burn_in_rate):
     labels = pd.read_csv(labels_file, sep=",")
     labels['label_code'] = pd.factorize(labels['label'],sort=True)[0] + 1
 
@@ -31,10 +31,13 @@ def run(annotation_file,labels_file,T,gamma,mu,alpha,beta):
         r_j = np.random.gamma(alpha,beta,(n_workers,1))
 
 
+    ground_truth = labels['label_code'].values
+    true_label = []
+
     for t in range(T):
-        ground_truth = labels['label_code'].values
-        accuracy = accuracy_score(ground_truth,z_i.round().reshape(1,-1)[0])
-        print('t:',t,'accuracy',accuracy)
+        # accuracy = accuracy_score(ground_truth,z_i.round().reshape(1,-1)[0])
+        # print('t:',t,'accuracy',accuracy)
+        print('t:',t)
 
         # for each item label
         for i in annotation_matrix[1].unique():
@@ -44,6 +47,8 @@ def run(annotation_file,labels_file,T,gamma,mu,alpha,beta):
             temp_gamma = sum_r_j.sum() + gamma
             temp_mu = ((aij*sum_r_j).sum() + gamma*mu)/temp_gamma
             z_i[i] = np.random.randn(1 ,1) * math.sqrt(1/temp_gamma) + temp_mu
+
+        true_label.append(z_i.copy())
 
         # for each worker reliability
         for j in annotation_matrix[0].unique():
@@ -57,6 +62,14 @@ def run(annotation_file,labels_file,T,gamma,mu,alpha,beta):
             r_j[j] = np.random.gamma(temp_alpha,temp_beta,1)
             
 
+    true_label = np.array(true_label)
+    burn_in_size = int(burn_in_rate * true_label.shape[0])
+    print('burn_in_size',burn_in_size)
+    true_label = true_label[burn_in_size:]
+    true_label = np.mean(true_label,(0,2))
+
+    accuracy = accuracy_score(ground_truth,true_label.round())
+    print('accuracy',accuracy)
         # tbd convergence break needed?
 
 if __name__ == '__main__':

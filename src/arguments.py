@@ -6,5 +6,6 @@ args = {
     'gamma' : 1,
     'mu' : 2,
     'alpha' : 2,
-    'beta' : 2
+    'beta' : 2,
+    'burn_in_rate' : 0.2
 }
