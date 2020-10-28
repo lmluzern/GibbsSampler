@@ -2,7 +2,7 @@
 args = {
     'annotation_file' : '../input/multiclass_aij.csv',
     'labels_file' : '../input/multiclass_labels.csv',
-    'T' : 300,
+    'T' : 10,
     'gamma' : 1,
     'mu' : 2,
     'alpha' : 2,
