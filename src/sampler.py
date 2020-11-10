@@ -26,7 +26,7 @@ def run(annotation_file,labels_file,T,gamma,mu,alpha,beta,burn_in_rate):
 
     z_i = np.random.randn(n_items ,1) * math.sqrt(1/gamma) + mu
     for i in range(z_i.shape[0]):
-        while z_i[i] <= lower_bound or  z_i[i] >= upper_bound:
+        while z_i[i] <= lower_bound or z_i[i] >= upper_bound:
             z_i[i] = np.random.randn(1 ,1) * math.sqrt(1/gamma) + mu
 
     r_j = np.random.gamma(alpha,beta,(n_workers,1))
@@ -41,11 +41,11 @@ def run(annotation_file,labels_file,T,gamma,mu,alpha,beta,burn_in_rate):
 
         # for each item label
         for i in annotation_matrix[1].unique():
-            sum_r_j = r_j[annotation_matrix[annotation_matrix[1] == i][0].values]
+            r_j_i = r_j[annotation_matrix[annotation_matrix[1] == i][0].values]
             aij = annotation_matrix[annotation_matrix[1] == i]['label_code'].values
             aij = aij.reshape((-1,1))
-            temp_gamma = sum_r_j.sum() + gamma
-            temp_mu = ((aij*sum_r_j).sum() + gamma*mu)/temp_gamma
+            temp_gamma = r_j_i.sum() + gamma
+            temp_mu = ((aij*r_j_i).sum() + gamma*mu)/temp_gamma
             z_i[i] = np.random.randn(1 ,1) * math.sqrt(1/temp_gamma) + temp_mu
             while z_i[i] <= lower_bound or  z_i[i] >= upper_bound:
                 z_i[i] = np.random.randn(1 ,1) * math.sqrt(1/temp_gamma) + temp_mu
@@ -71,7 +71,7 @@ def run(annotation_file,labels_file,T,gamma,mu,alpha,beta,burn_in_rate):
     print('burn_in_size',burn_in_size)
     true_label = true_label[burn_in_size:]
     true_label = np.mean(true_label,(0,2))
-    
+
     accuracy = accuracy_score(ground_truth,true_label.round())
     print('accuracy',accuracy)
     
