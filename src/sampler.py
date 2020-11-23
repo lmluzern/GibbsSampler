@@ -1,84 +1,68 @@
+# inspired by https://kieranrcampbell.github.io/blog/2016/05/15/gibbs-sampling-bayesian-linear-regression.html (18.11.2020)
 import pandas as pd
 import numpy as np
-import scipy.stats as stats
-import arguments
-import math
 from sklearn.metrics import accuracy_score
+import time
 
-LABEL_NAMES = ['emerging', 'established', 'no_option']
-NUMBER_OF_LABELS = len(LABEL_NAMES)
-LABEL_INDEX = np.array(range(0,NUMBER_OF_LABELS))
+def sample_z_i(gamma_0,mu_0,r_j,a_ij):
+    precision = r_j.sum() + gamma_0
+    mean = ((r_j*a_ij).sum() + gamma_0 * mu_0)/precision
+    # return np.random.normal(mean, 1 / np.sqrt(precision))
+    return np.random.normal(mean,np.sqrt(precision))
 
-def run(annotation_file,labels_file,T,gamma,mu,alpha,beta,burn_in_rate):
-    labels = pd.read_csv(labels_file, sep=",")
-    labels['label_code'] = pd.factorize(labels['label'],sort=True)[0] + 1
+def sample_r_j(A_0,B_0,z_i,a_ij):
+    A_new = A_0 + a_ij.shape[0]/2.0
+    B_new = B_0 + ((a_ij-z_i)**2).sum()/2
+    return np.random.gamma(A_new,1 /B_new)
 
-    lower_bound = 0.5
-    upper_bound = labels['label_code'].max() + 0.5
-
-    annotation_matrix = pd.read_csv(annotation_file, sep=",",header=None)
+def gibbs(param):
+    annotation_matrix = pd.read_csv(param['annotation_file'],sep=",",header=None)
     annotation_matrix['label_code'] = pd.factorize(annotation_matrix[2],sort=True)[0] + 1
-
-    assert annotation_matrix[1].unique().shape[0] == labels.shape[0]
-
     n_workers = annotation_matrix[0].unique().shape[0]
     n_items = annotation_matrix[1].unique().shape[0]
+    r  = np.full((n_workers,1),param['init_r'],dtype=float)
+    z = np.full((n_items,1),-1,dtype=float)
+    trace = np.zeros((param['iters'],n_items))
 
-    z_i = np.random.randn(n_items ,1) * math.sqrt(1/gamma) + mu
-    for i in range(z_i.shape[0]):
-        while z_i[i] <= lower_bound or z_i[i] >= upper_bound:
-            z_i[i] = np.random.randn(1 ,1) * math.sqrt(1/gamma) + mu
-
-    r_j = np.random.gamma(alpha,beta,(n_workers,1))
-    while np.where( r_j < 0 )[0].shape[0] > 0:
-        r_j = np.random.gamma(alpha,beta,(n_workers,1))
-
-    ground_truth = labels['label_code'].values
-    true_label = []
-
-    for t in range(T):
-        print('t:',t)
-
+    for it in range(param['iters']):
         # for each item label
+        print('it:',it)
         for i in annotation_matrix[1].unique():
-            r_j_i = r_j[annotation_matrix[annotation_matrix[1] == i][0].values]
-            aij = annotation_matrix[annotation_matrix[1] == i]['label_code'].values
-            aij = aij.reshape((-1,1))
-            temp_gamma = r_j_i.sum() + gamma
-            temp_mu = ((aij*r_j_i).sum() + gamma*mu)/temp_gamma
-            z_i[i] = np.random.randn(1 ,1) * math.sqrt(1/temp_gamma) + temp_mu
-            while z_i[i] <= lower_bound or  z_i[i] >= upper_bound:
-                z_i[i] = np.random.randn(1 ,1) * math.sqrt(1/temp_gamma) + temp_mu
-
-        true_label.append(z_i.copy())
+            r_j = r[annotation_matrix[annotation_matrix[1] == i][0].values]
+            a_ij = annotation_matrix[annotation_matrix[1] == i]['label_code'].values.reshape((-1,1))
+            z[i] = sample_z_i(param['gamma_0'],param['mu_0'],r_j,a_ij)
+        trace[it,:] = z.transpose()[0].copy()
 
         # for each worker reliability
         for j in annotation_matrix[0].unique():
-            sum_aij_zi = 0
-            for index, row in annotation_matrix[annotation_matrix[0] == j].iterrows():
-                # row[1] is the item id
-                sum_aij_zi += (row['label_code'] - z_i[row[1]])**2
+            z_i = z[annotation_matrix[annotation_matrix[0] == j][1].values]
+            a_ij = annotation_matrix[annotation_matrix[0] == j]['label_code'].values.reshape((-1,1))
+            r[j] = sample_r_j(param['A_0'],param['B_0'],z_i,a_ij)
 
-            temp_alpha = alpha + annotation_matrix[annotation_matrix[0] == j].shape[0] / 2
-            temp_beta = beta + 0.5 * sum_aij_zi
-
-            r_j[j] = np.random.gamma(temp_alpha,temp_beta,1)
-            while r_j[j] < 0:
-                r_j[j] = np.random.gamma(temp_alpha,temp_beta,1)
-            
-    true_label = np.array(true_label)
-    burn_in_size = int(burn_in_rate * true_label.shape[0])
-    print('burn_in_size',burn_in_size)
-    true_label = true_label[burn_in_size:]
-    true_label = np.mean(true_label,(0,2))
-
-    accuracy = accuracy_score(ground_truth,true_label.round())
-    print('accuracy',accuracy)
-    
-    # tbd convergence break needed?
+    return trace
 
 if __name__ == '__main__':
-    # load default arguments
-    args = arguments.args
+    param = {
+        'annotation_file' : '../input/multiclass_aij.csv',
+        'labels_file' : '../input/multiclass_labels.csv',
+        'A_0' : 2,
+        'B_0' : 4,
+        'gamma_0' : 1,
+        'mu_0' : 2,
+        'init_r' : 4,
+        'iters' : 10,
+        'burn_in_rate' : 0.5
+        }
 
-    run(**args)
+    start_t = time.time()
+    trace = gibbs(param)
+    print('gibbs execution time (s):', time.time() - start_t)
+
+    labels = pd.read_csv(param['labels_file'],sep=",")
+    labels['label_code'] = pd.factorize(labels['label'],sort=True)[0] + 1
+    ground_truth = labels['label_code'].values
+
+    trace_burnt = trace[int(param['iters']*param['burn_in_rate']):]
+    z_median = np.median(trace_burnt,axis=0)
+    accuracy = accuracy_score(ground_truth,z_median.round())
+    print('accuracy',accuracy)
