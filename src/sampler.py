@@ -66,7 +66,7 @@ def sample_z_i(gamma_0,mu_0,r_j,a_ij):
 def sample_r_j(A_0,B_0,z_i,a_ij):
     A_new = A_0 + a_ij.shape[0]/2.0
     B_new = B_0 + ((a_ij-z_i)**2).sum()/2
-    return np.random.gamma(A_new,B_new)
+    return np.random.gamma(A_new,(1/B_new))
 
 def gibbs(param,e2t):
     annotation_matrix = pd.read_csv(param['annotation_file'],sep=",",header=None)
@@ -121,14 +121,15 @@ if __name__ == '__main__':
     param = {
         'annotation_file' : '../input/multiclass_aij.csv',
         'labels_file' : '../input/multiclass_labels.csv',
-        'A_0' : 2,
-        'B_0' : 2,
-        'gamma_0' : 1,
-        'mu_0' : 2,
+        'A_0' : 8,
+        'B_0' : 6,
+        'gamma_0' : 1.25,
+        'mu_0' : 4.25,
         'init_r' : 4,
         'iters' : 10,
         'burn_in_rate' : 0.5,
-        'sampling_rate' : 0.5
+        'supervision_rate' : 0.0,
+        'sampling_rate' : 0.1
         }
     z_median = run(param,{})
     ground_truth = pd.factorize(pd.read_csv(param['labels_file'],sep=",")['label'],sort=True)[0] + 1
