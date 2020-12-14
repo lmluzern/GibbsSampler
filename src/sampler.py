@@ -95,7 +95,7 @@ def gibbs(param,e2t):
 
     trace_conv = np.full((param['iters'],6),0,dtype=float)
 
-    # annotation_matrix = neg_sampling(annotation_matrix,param['sampling_rate'])
+    annotation_matrix = neg_sampling(annotation_matrix,param['sampling_rate'])
 
     J,a_j = getItemDict(annotation_matrix)
     I,a_i = getWorkerDict(annotation_matrix)
@@ -116,8 +116,8 @@ def gibbs(param,e2t):
             r_j = r[J[i]]
             a_ij = a_j[i]
             z[i],trace_precision[i],trace_mean[i] = sample_z_i(param['gamma_0'],param['mu_0'],r_j,a_ij)
-            # while z[i] <= lower_bound or z[i] >= upper_bound:
-            #     z[i] = sample_z_i(param['gamma_0'],param['mu_0'],r_j,a_ij)
+            while z[i] <= lower_bound or z[i] >= upper_bound:
+                z[i],trace_precision[i],trace_mean[i] = sample_z_i(param['gamma_0'],param['mu_0'],r_j,a_ij)
         trace[it,:] = z.transpose()[0].copy()
         
         # for each worker reliability
@@ -127,6 +127,7 @@ def gibbs(param,e2t):
             r[j],trace_A[j],trace_B[j] = sample_r_j(param['A_0'],param['B_0'],z_i,a_ij)
 
         trace_conv[it] = LA.norm(trace_precision-prev_trace_precision), LA.norm(trace_mean-prev_trace_mean), LA.norm(trace_A-prev_trace_A), LA.norm(trace_B-prev_trace_B), LA.norm(z-prev_trace_z), LA.norm(r-prev_trace_r)
+    print('r max/mix:', np.max(r), np.min(r))
     return trace,trace_conv
 
 def run(param,e2t):
@@ -149,17 +150,18 @@ def run(param,e2t):
 
 if __name__ == '__main__':
     param = {
-        'annotation_file' : '../input/multiclass_aij.csv',
-        'labels_file' : '../input/multiclass_labels.csv',
-        'A_0' : 2,
-        'B_0' : 2,
-        'gamma_0' : 0.5,
-        'mu_0' : 2,
-        'iters' : 20,
-        'burn_in_rate' : 0.5,
-        'supervision_rate' : 0.0,
-        'sampling_rate' : 0.1
-        }
+    'annotation_file' : '../input/multiclass_aij.csv',
+    'labels_file' : '../input/multiclass_labels.csv',
+    'A_0' : 8,
+    'B_0' : 2,
+    'gamma_0' : 8,
+    'mu_0' : 2.9,
+    'iters' : 1000,
+    'burn_in_rate' : 0.5,
+    'supervision_rate' : 0.6,
+    'sampling_rate' : 0.4
+    }
+
     z_median, trace_conv = run(param,{})
     ground_truth = pd.factorize(pd.read_csv(param['labels_file'],sep=",")['label'],sort=True)[0] + 1
     accuracy = accuracy_score(ground_truth,z_median.round())
