@@ -95,7 +95,7 @@ def gibbs(param,e2t):
 
     trace_conv = np.full((param['iters'],6),0,dtype=float)
 
-    annotation_matrix = neg_sampling(annotation_matrix,param['sampling_rate'])
+    # annotation_matrix = neg_sampling(annotation_matrix,param['sampling_rate'])
 
     J,a_j = getItemDict(annotation_matrix)
     I,a_i = getWorkerDict(annotation_matrix)
@@ -127,7 +127,7 @@ def gibbs(param,e2t):
             r[j],trace_A[j],trace_B[j] = sample_r_j(param['A_0'],param['B_0'],z_i,a_ij)
 
         trace_conv[it] = LA.norm(trace_precision-prev_trace_precision), LA.norm(trace_mean-prev_trace_mean), LA.norm(trace_A-prev_trace_A), LA.norm(trace_B-prev_trace_B), LA.norm(z-prev_trace_z), LA.norm(r-prev_trace_r)
-    print('r max/mix:', np.max(r), np.min(r))
+    # print('r max/mix:', np.max(r), np.min(r))
     return trace,trace_conv
 
 def run(param,e2t):
