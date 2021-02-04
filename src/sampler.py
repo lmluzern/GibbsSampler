@@ -150,16 +150,16 @@ def run(param,e2t):
 
 if __name__ == '__main__':
     param = {
-    'annotation_file' : '../input/multiclass_aij.csv',
-    'labels_file' : '../input/multiclass_labels.csv',
-    'A_0' : 8,
-    'B_0' : 2,
-    'gamma_0' : 8,
-    'mu_0' : 2.9,
+    'annotation_file' : '../input/influencer_aij.csv',
+    'labels_file' : '../input/influencer_labels.csv',
+    'A_0' : 1,
+    'B_0' : 1,
+    'gamma_0' : 0.8,
+    'mu_0' : 3.5,
     'iters' : 1000,
-    'burn_in_rate' : 0.5,
-    'supervision_rate' : 0.6,
-    'sampling_rate' : 0.4
+    'burn_in_rate' : 0.2,
+    'supervision_rate' : 0.0,
+    'sampling_rate' : 0.0
     }
 
     z_median, trace_conv = run(param,{})

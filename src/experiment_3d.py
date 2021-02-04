@@ -11,14 +11,14 @@ def gete2t(train_size,truth_labels):
     return e2t
 
 param = {
-	'annotation_file' : '../input/multiclass_aij.csv',
-    'labels_file' : '../input/multiclass_labels.csv',
+	'annotation_file' : '../input/influencer_aij.csv',
+    'labels_file' : '../input/influencer_labels.csv',
     'A_0' : 8,
     'B_0' : 1,
     'gamma_0' : 1,
     'mu_0' : 2,
     'iters' : 1000,
-    'burn_in_rate' : 0.5,
+    'burn_in_rate' : 0.2,
     'supervision_rate' : 0.6,
     'sampling_rate' : 0.0
     }
